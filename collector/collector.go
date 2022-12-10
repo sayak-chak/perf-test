@@ -19,9 +19,9 @@ type collector struct {
 }
 
 //Returns a new collector with five test runners
-func New() *collector {
+func New(noOfTimesEachTestIsToBeExecutedInARun int) *collector {
 	cllctr := collector{}
-	cllctr.addRunners(defaultRunnerCount)
+	cllctr.addRunners(defaultRunnerCount, noOfTimesEachTestIsToBeExecutedInARun)
 	return &cllctr
 }
 
@@ -51,12 +51,12 @@ func (c *collector) executeRunner(idx int) {
 	c.testReports = append(c.testReports, generateTestReport(c.runners[idx].RunTests(), idx))
 }
 
-func (c *collector) addRunners(runnerCount int) {
+func (c *collector) addRunners(runnerCount, noOfTimesEachTestIsToBeExecutedInARun int) {
 	for i := 0; i < runnerCount; i++ {
-		c.addRunner()
+		c.addRunner(noOfTimesEachTestIsToBeExecutedInARun)
 	}
 }
 
-func (c *collector) addRunner() {
-	c.runners = append(c.runners, testRunner.New())
+func (c *collector) addRunner(noOfTimesEachTestIsToBeExecutedInARun int) {
+	c.runners = append(c.runners, testRunner.New(noOfTimesEachTestIsToBeExecutedInARun))
 }

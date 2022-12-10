@@ -3,17 +3,20 @@ package runner
 import (
 	"net/http"
 	"net/http/httptrace"
+	"sync"
 	"time"
 )
 
 type runner struct {
-	testList []testAttributes
-	client   *http.Client
+	testList     []testAttributes
+	client       *http.Client
+	noOfTestRuns int
 }
 
-func New() *runner {
+func New(noOfTestRuns int) *runner {
 	return &runner{
-		client: &http.Client{},
+		client:       &http.Client{},
+		noOfTestRuns: noOfTestRuns,
 	}
 }
 
@@ -23,9 +26,17 @@ func (w *runner) AddTest(methodType, linkAddress, headers, reqBody string, reqHe
 
 func (w *runner) RunTests() []Result {
 	var results []Result
-	for _, testDetails := range w.testList {
-		results = append(results, w.runTestFor(testDetails))
+	var wg sync.WaitGroup
+	for i := 0; i < w.noOfTestRuns; i++ {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			for _, testDetails := range w.testList {
+				results = append(results, w.runTestFor(testDetails))
+			}
+			wg.Done()
+		}(&wg)
 	}
+	wg.Wait()
 
 	return results
 }
