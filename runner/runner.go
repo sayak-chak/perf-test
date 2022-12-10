@@ -1,0 +1,54 @@
+package runner
+
+import (
+	"net/http"
+	"net/http/httptrace"
+	"time"
+)
+
+type runner struct {
+	testList []testAttributes
+	client   *http.Client
+}
+
+func New() *runner {
+	return &runner{
+		client: &http.Client{},
+	}
+}
+
+func (w *runner) AddTest(methodType, linkAddress, headers, reqBody string, reqHeaders map[string][]string, expectedResp int) { //TODO: refactor
+	w.testList = append(w.testList, *newTestArributes(methodType, linkAddress, headers, reqBody, reqHeaders, expectedResp))
+}
+
+func (w *runner) RunTests() []Result {
+	var results []Result
+	for _, testDetails := range w.testList {
+		results = append(results, w.runTestFor(testDetails))
+	}
+
+	return results
+}
+
+func (w *runner) runTestFor(testDetails testAttributes) Result {
+	var timeTaken time.Duration
+	req, err := http.NewRequest(testDetails.methodType, testDetails.link, testDetails.reqBody)
+	if err != nil {
+		return *getResultOnSetupFailure(err)
+	}
+	req.Header = testDetails.headers
+	startTime := time.Now()
+	trace := &httptrace.ClientTrace{
+		GotFirstResponseByte: func() {
+			timeTaken = time.Since(startTime)
+		},
+	}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+
+	res, err := w.client.Do(req)
+	if err != nil {
+		return *getResultOnSetupFailure(err)
+	}
+
+	return *getResultPostSetupSuccess(timeTaken, res.StatusCode, testDetails.expectedRespCode)
+}
